@@ -19,27 +19,49 @@ with open(args.output, 'w') as outfile:
 	with open(args.engine,'r') as enginefile:
 		for line in enginefile:
 			outfile.write(line)
-	outfile.write("\n#End of Engine declaration\n\n")
+	outfile.write("\n#Global Variables\n\n#End of Engine declaration\n\n")
+	outfile.write("weightBitWidth=8\nactivationBitWidth=8\n\n")
 
 	with open(args.input,'r') as file:
 		for line in file:
-			if("def __init__(" in line):
-				lastParentheses=line.rfind(")")
-				line=line[:lastParentheses] + ", weights=8, activations=8" + line[lastParentheses:]
+			if(".__init__()" in line):
+				line=line+"        global weightBitWidth\n        global activationBitWidth\n"
 			if("nn.Conv2d" in line):
 				line=line.replace("nn.Conv2d","qnn.QuantConv2d",1)
 
 				lastParentheses=line.rfind(")")
-				line=line[:lastParentheses] + ", weight_bit_width=weights, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
+				line=line[:lastParentheses] + ", weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
 
 			if("nn.ReLU" in line):
 				line=line.replace("nn.ReLU","qnn.QuantReLU",1)
 
 				lastParentheses=line.rfind(")")
 				if(line[lastParentheses-1]=='('):
-					line=line[:lastParentheses] + "bit_width=activations, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
+					line=line[:lastParentheses] + "bit_width=activationBitWidth, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
 				else:
-					line=line[:lastParentheses] + ", bit_width=activations, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
-			outfile.write(line)
+					line=line[:lastParentheses] + ", bit_width=activationBitWidth, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
+			if("nn.Linear" in line):
+				line=line.replace("nn.Linear","qnn.QuantLinear",1)
 
+				lastParentheses=line.rfind(")")
+				if("bias=" in line):
+					line=line[:lastParentheses] + ", weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
+				else:
+					line=line[:lastParentheses] + ", bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
+			if("nn.AvgPool2d" in line):
+				line=line.replace("nn.AvgPool2d","qnn.QuantAvgPool2d",1)
+
+				lastParentheses=line.rfind(")")
+				line=line[:lastParentheses] + ",bit_width=activationBitWidth, return_quant_tensor=True"+line[lastParentheses:]
+			if("nn.MaxPool2d" in line):
+				line=line.replace("nn.MaxPool2d","qnn.QuantMaxPool2d",1)
+
+				lastParentheses=line.rfind(")")
+				line=line[:lastParentheses] + ", return_quant_tensor=True"+line[lastParentheses:]
+
+
+
+
+			outfile.write(line)
+	outfile.write("\n\nclass setBitWidths():\n    def __init__(self,weight,activation):\n        global weightBitWidth\n        global activationBitWidth\n        weightBitWidth=weight\n        activationBitWidth=activation")
 outfile.close()

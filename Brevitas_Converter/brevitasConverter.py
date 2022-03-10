@@ -65,3 +65,9 @@ with open(args.output, 'w') as outfile:
 			outfile.write(line)
 	outfile.write("\n\nclass setBitWidths():\n    def __init__(self,weight,activation):\n        global weightBitWidth\n        global activationBitWidth\n        weightBitWidth=weight\n        activationBitWidth=activation")
 outfile.close()
+print("Conversion done.\n\
+Please include the following modifications on the output file:\n\
+Include the following as the first layer:\n\
+	\"self.quant_inp = qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)\"\n\
+Turn the return_quant_tensor parameter of the last layer from True to False\n\
+On the training script define the bit_width of the weights and activations by calling \"setBitWidths(weights,activations)\" before you call the model")

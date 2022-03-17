@@ -20,9 +20,9 @@ class LeNet(nn.Module):
 
     def forward(self, x):
         out = self.relu1(self.conv1(x))
-        out = self.pool1(out, 2)
+        out = self.pool1(out)
         out = self.relu2(self.conv2(out))
-        out = self.pool2(out, 2)
+        out = self.pool2(out)
         out = out.view(out.size(0), -1)
         out = self.relu3(self.fc1(out))
         out = self.relu4(self.fc2(out))

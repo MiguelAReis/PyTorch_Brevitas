@@ -20,7 +20,14 @@ class CustomQuant(ExtendedInjector):
     bit_width = None
     narrow_range = True
     signed = True
-    quant_type = QuantType.INT
+    
+    @value
+    def quant_type():
+        global weightBitWidth
+        if weightBitWidth == 1:
+            return QuantType.BINARY
+        else:
+            return QuantType.INT
 
 class CustomWeightQuant(CustomQuant,WeightQuantSolver):
     scaling_const = 1.0        

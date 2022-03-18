@@ -87,7 +87,6 @@ with open(args.output, 'w') as outfile:
 
 
 			outfile.write(line)
-	outfile.write("\n\nclass setBitWidths():\n    def __init__(self,weight,activation):\n        global weightBitWidth\n        global activationBitWidth\n        weightBitWidth=weight\n        activationBitWidth=activation")
 outfile.close()
 print("Conversion done.\n\
 New net name changed to " + quantNetName +"\n\

@@ -8,8 +8,10 @@ parser.add_argument('--output', default="./out.py", type=str, help='output folde
 parser.add_argument('--engine', default="./Example/quantizers.py", type=str, help='output file')
 parser.add_argument('--weightsEngine', default="CustomWeightQuant", type=str, help='output file')
 parser.add_argument('--activationsEngine', default="CustomActQuant", type=str, help='output file')
+parser.add_argument('--inputBitWidth', default=8, type=int, help="bit width of input images")
 args = parser.parse_args()
 
+firstlayer=False
 
 						
 with open(args.output, 'w') as outfile:
@@ -31,16 +33,19 @@ with open(args.output, 'w') as outfile:
 				namePos=line.casefold().rfind(netname.casefold())
 				quantNetName=line[namePos:namePos+len(netname)]+"Quant"
 				line = line[:namePos+len(netname)]+"Quant"+line[namePos+len(netname):]
+				if(("super("+quantNetName) in line):
+					firstlayer=True
 
-			if(".__init__()" in line):
-				line=line+"        global weightBitWidth\n        global activationBitWidth\n\n        self.quant_inp = qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)\n"
+			if(".__init__()" in line and firstlayer):
+				line=line+"        global weightBitWidth\n        global activationBitWidth\n\n        self.quant_inp = qnn.QuantIdentity(bit_width="+str(args.inputBitWidth)+", act_quant=CustomActQuant, return_quant_tensor=True)\n"
 
 			if("def forward" in line):
 				lastParentheses=line.rfind(")")
 				out=line[line[:lastParentheses].rfind(" ")+1:lastParentheses]
 				line="    def setBitWidths(weight,activation):\n        global weightBitWidth\n        global activationBitWidth\n        weightBitWidth=weight\n        activationBitWidth=activation\n\n"+line
-			if(("("+out+")") in line):
+			if(("("+out+")") in line and firstlayer):
 				line=line.replace(out,"self.quant_inp("+out+")",1)
+				firstlayer=False
 			if("nn.Conv2d" in line):
 				line=line.replace("nn.Conv2d","qnn.QuantConv2d",1)
 
@@ -55,7 +60,7 @@ with open(args.output, 'w') as outfile:
 					line=line[:lastParentheses] + "bit_width=activationBitWidth, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
 				else:
 					line=line[:lastParentheses] + ", bit_width=activationBitWidth, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
-				line = line[:len(line)-1] +" if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)\n"
+				line = line[:len(line)-1] +" if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)\n"
 			if("nn.Linear" in line):
 				line=line.replace("nn.Linear","qnn.QuantLinear",1)
 

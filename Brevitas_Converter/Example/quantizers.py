@@ -26,6 +26,8 @@ class CustomQuant(ExtendedInjector):
         global weightBitWidth
         if weightBitWidth == 1:
             return QuantType.BINARY
+        #elif  weightBitWidth ==2:
+        #    return QuantType.TERNARY
         else:
             return QuantType.INT
 
@@ -33,5 +35,5 @@ class CustomWeightQuant(CustomQuant,WeightQuantSolver):
     scaling_const = 1.0        
 
 class CustomActQuant(CustomQuant, ActQuantSolver):
-    min_val = -1.0
-    max_val = 1.0-1.0/64
+    min_val = 0
+    max_val = 10

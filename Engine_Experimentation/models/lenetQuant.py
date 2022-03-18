@@ -34,6 +34,8 @@ class CustomQuant(ExtendedInjector):
         global weightBitWidth
         if weightBitWidth == 1:
             return QuantType.BINARY
+        #elif  weightBitWidth ==2:
+        #    return QuantType.TERNARY
         else:
             return QuantType.INT
 
@@ -41,8 +43,8 @@ class CustomWeightQuant(CustomQuant,WeightQuantSolver):
     scaling_const = 1.0        
 
 class CustomActQuant(CustomQuant, ActQuantSolver):
-    min_val = -1.0
-    max_val = 1.0-1.0/64
+    min_val = 0
+    max_val = 10
 
 #Global Variables
 
@@ -58,17 +60,17 @@ class LeNetQuant(nn.Module):
         global weightBitWidth
         global activationBitWidth
 
-        self.quant_inp = qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)
+        self.quant_inp = qnn.QuantIdentity(bit_width=8, act_quant=CustomActQuant, return_quant_tensor=True)
         self.conv1 = qnn.QuantConv2d(3, 6, 5, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=True)
-        self.relu1  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)
+        self.relu1  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)
         self.pool1 = qnn.QuantMaxPool2d(2, return_quant_tensor=True)
         self.conv2 = qnn.QuantConv2d(6, 16, 5, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=True)
-        self.relu2  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)
+        self.relu2  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)
         self.pool2 = qnn.QuantMaxPool2d(2, return_quant_tensor=True)
         self.fc1   = qnn.QuantLinear(16*5*5, 120, bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=True)
-        self.relu3  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)
+        self.relu3  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)
         self.fc2   = qnn.QuantLinear(120, 84, bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=True)
-        self.relu4  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, return_quant_tensor=True)
+        self.relu4  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)
         self.fc3   = qnn.QuantLinear(84, 10, bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=False)
 
 
@@ -88,11 +90,3 @@ class LeNetQuant(nn.Module):
         out = self.relu4(self.fc2(out))
         out = self.fc3(out)
         return out
-
-
-class setBitWidths():
-    def __init__(self,weight,activation):
-        global weightBitWidth
-        global activationBitWidth
-        weightBitWidth=weight
-        activationBitWidth=activation

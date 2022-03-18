@@ -83,7 +83,7 @@ if args.resume:
     start_epoch = 0
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=5e-4)
+optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=0)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 

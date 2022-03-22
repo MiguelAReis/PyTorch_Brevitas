@@ -59,14 +59,18 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 # Model
 print('==> Building model..')
 print("Weights = "+ str(args.weights) +", Activations = "+str(args.activations))
-ResNetQuant.setBitWidths(args.weights,args.activations)
-#net = LeNetQuant()
-net = ResNetQuant101()
+LeNetQuant.setBitWidths(args.weights,args.activations)
+net = LeNetQuant()
+#net = ResNetQuant101()
 #net = MobileNetQuant()
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=0)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 if args.resume:
     # Load checkpoint.
@@ -76,15 +80,19 @@ if args.resume:
     #for k, v in checkpoint["net"].items():
     #    k = k.replace("module.","",1) # remove `module.`
     #    print(k)
-    net.module.load_state_dict(checkpoint["net"])
+    try:
+        net.module.load_state_dict(checkpoint["net"])
+    except:
+        net.load_state_dict(checkpoint["net"])
+
+    optimizer.load_state_dict(checkpoint['optimizer_state'])
+
     net.to(device)
 
-    best_acc = 0
-    start_epoch = 0
+    best_acc = checkpoint['acc']
+    start_epoch = checkpoint['epoch']
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=0)
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+
 
 
 # Training
@@ -137,6 +145,7 @@ def test(epoch):
         print('Saving..')
         state = {
             'net': net.state_dict(),
+            'optimizer_state': optimizer.state_dict(),
             'acc': acc,
             'epoch': epoch,
         }
@@ -144,7 +153,6 @@ def test(epoch):
             os.mkdir('checkpoint')
         torch.save(state, './checkpoint/ckpt.pth')
         best_acc = acc
-
 
 for epoch in range(start_epoch, start_epoch+args.epochs):
     train(epoch)

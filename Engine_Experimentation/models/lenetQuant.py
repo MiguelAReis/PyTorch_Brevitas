@@ -18,7 +18,7 @@ from dependencies import value
 
 class CustomQuant(ExtendedInjector):
     bit_width_impl_type = BitWidthImplType.CONST
-    scaling_impl_type = ScalingImplType.CONST
+    #scaling_impl_type = ScalingImplType.CONST
     restrict_scaling_type = RestrictValueType.POWER_OF_TWO
     zero_point_impl = ZeroZeroPoint
     float_to_int_impl_type = FloatToIntImplType.ROUND

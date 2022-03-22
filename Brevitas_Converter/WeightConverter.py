@@ -1,84 +1,27 @@
-import argparse
-import os
-import numpy as np
-from tqdm import tqdm
-
-import brevitas.nn as qnn
-import math
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
-import torch.backends.cudnn as cudnn
-
-import torchvision
-import torchvision.transforms as transforms
-
-from TrainedModel import lenet
-from TrainedModel import lenetquant
-
-model=torch.nn.DataParallel(lenet.LeNet())
-modelQuant=torch.nn.DataParallel(lenetquant.LeNetQuant())
-
-state_dict = torch.load("TrainedModel/lenet67%teste.pth", map_location='cpu')
-
-model.load_state_dict(state_dict['net'],strict=True)
-model.eval()
-
-stateQuant = {
-    'net': modelQuant.state_dict()
-}
-torch.save(stateQuant, './TrainedModel/blankQuant.pth')
-modelQuant
-
-#torch.set_printoptions(profile="full")
+import argparse
+import os
 
 
-for name, param in model.named_parameters():
-	print("Original " +name)
-	for nameQ, child in modelQuant.named_children():
-		for nameQ_, param_ in child.named_parameters():
-			if(nameQ_ in name):
-				print("New "+ nameQ_)
-				print("Before")
-				print(param_)
-				with torch.no_grad():
-					param_.data=param
-				print("After")
-				print(param_)
+parser = argparse.ArgumentParser(description='Weights Extractor')
+parser.add_argument('--original', default="original.pth", type=str, help='Original PTH file with trained weights')
+parser.add_argument('--blank', default="blank.pth", type=str, help='Blank Quantized PTH file')
+parser.add_argument('--out', default="out.pth", type=str, help='Output file with quantized weights')
+args = parser.parse_args()
 
-for name, param in model.named_parameters():
-	print("Original " +name)
-	for nameQ, child in modelQuant.named_children():
-		for nameQ_, param_ in child.named_parameters():
-			if(nameQ_ in name):
-				print("New "+ nameQ_)
-				print("test")
-				print(param_)
-			#if("quant_inp.act_quant.fused_activation_quant_proxy.tensor_quant.scaling_impl.value" == nameQ_):
-				#print("TRUE")
-				#print(nameQ_)
-				#param_= 
-				#print(param_)
+original = torch.load(args.original)
+blank = torch.load(args.blank)
 
+for key, value in original["net"].items():
+	for key_, value_ in blank["net"].items():
+		if(key==key_):
+			with torch.no_grad():
+				value_.data=value.clone().detach()
+			print("FOUND")
+			print(key+str(value_))
+			print(key_+str(value))
+			break;
 
-
-
-
-
-stateQuant["net"]["quant_inp.act_quant.fused_activation_quant_proxy.tensor_quant.scaling_impl.value"]=torch.tensor(2.73, requires_grad=True)
-
-
-from collections import OrderedDict
-new_state_dict = OrderedDict()
-for k, v in stateQuant["net"].items():
-    name = k.replace("module.","",1) # remove `module.`
-    new_state_dict[name] = v
-# load params
-
-for k, v in new_state_dict.items():
-	print(k)
-ckpt = OrderedDict()
-ckpt["net"]=new_state_dict
-torch.save(ckpt, './TrainedModel/newQuant.pth')
+torch.save(blank,args.out)

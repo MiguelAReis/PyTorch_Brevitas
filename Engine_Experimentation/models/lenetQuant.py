@@ -18,7 +18,7 @@ from dependencies import value
 
 class CustomQuant(ExtendedInjector):
     bit_width_impl_type = BitWidthImplType.CONST
-    #scaling_impl_type = ScalingImplType.CONST
+    scaling_impl_type = ScalingImplType.CONST
     restrict_scaling_type = RestrictValueType.POWER_OF_TWO
     zero_point_impl = ZeroZeroPoint
     float_to_int_impl_type = FloatToIntImplType.ROUND
@@ -60,7 +60,7 @@ class LeNetQuant(nn.Module):
         global weightBitWidth
         global activationBitWidth
 
-        self.quant_inp = qnn.QuantIdentity(bit_width=8, act_quant=CustomActQuant, return_quant_tensor=True)
+        self.imageQuant = qnn.QuantIdentity(bit_width=8, act_quant=CustomActQuant, return_quant_tensor=True)
         self.conv1 = qnn.QuantConv2d(3, 6, 5, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=True)
         self.relu1  = qnn.QuantReLU(bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant) if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)
         self.pool1 = qnn.QuantMaxPool2d(2, return_quant_tensor=True)
@@ -81,7 +81,7 @@ class LeNetQuant(nn.Module):
         activationBitWidth=activation
 
     def forward(self, x):
-        out = self.relu1(self.conv1(self.quant_inp(x)))
+        out = self.relu1(self.conv1(self.imageQuant(x)))
         out = self.pool1(out)
         out = self.relu2(self.conv2(out))
         out = self.pool2(out)

@@ -11,14 +11,13 @@ import torchvision
 import brevitas.nn as qnn
 import math
 
-parser = argparse.ArgumentParser(description='Weights Extractor')
-parser.add_argument('--pth', default="ckpt.pth", type=str, help='pth location')
-parser.add_argument('--weights', default=8, type=int, help='weights bit width')
-parser.add_argument('--activations', default=8, type=int, help='activations bit width')
-parser.add_argument('--folder', default="Example", type=str, help='folder of the net')
-parser.add_argument('--modelFile', default="ResNet101Quant", type=str, help='name of net')
-parser.add_argument('--model', default="ResNet101Quant", type=str, help='name of net')
-parser.add_argument('--fullprint',action='store_true',help='resume from checkpoint')
+parser = argparse.ArgumentParser(description='Quantized Weights Extractor')
+parser.add_argument('--pth', default="ckpt.pth", type=str, help='Location of .pth file e.g. ckpt.pth')
+parser.add_argument('--weights', default=8, type=int, help='Weights bit width')
+parser.add_argument('--activations', default=8, type=int, help='Activations bit width')
+parser.add_argument('--modelFile', default="lenetQuant", type=str, help='Input Model Description file e.g. lenetQuant.py')
+parser.add_argument('--model', default="LeNetQuant", type=str, help='Name of the Model e.g LeNetQuant')
+parser.add_argument('--fullprint',action='store_true',help='Print Full tensors')
 args = parser.parse_args()
 
 exec("from "+args.modelFile.replace(".py","",1)+" import *")
@@ -27,8 +26,14 @@ model = eval(args.model+"()")
 model = torch.nn.DataParallel(model)
 state_dict = torch.load(args.pth, map_location='cpu')
 model.load_state_dict(state_dict["net"])
-model.eval()
+
 model.to("cuda")
+model.eval()
+cache_inference_quant_bias=True
+with torch.no_grad():
+    inputs = torch.empty(2,3,32,32)
+    inputs.to("cuda")
+    model(inputs)
 
 if(args.fullprint):
     torch.set_printoptions(profile="full")
@@ -40,13 +45,14 @@ for key, value in state_dict["net"].items():
         print("Layer Name = "+ key)
         print("Scale = " + str(eval("model."+key.replace("weight","quant_weight_scale()",1))))
         input("ENTER")
-    
+    '''
     if("bias" in key):
-        print(eval("model."+key))
+        print("model."+key.replace(".bias","",1)+".int_bias()")
+        print(eval("model."+key.replace(".bias","",1)+".int_bias()"))
         print("Layer Name = "+ key)
         #print("Scale = " + str(eval("model."+key.replace("bias","maybe_quant_bias_scale()",1))))
         input("ENTER")
-    
+    '''
     if("relu" in key):
         layerstr=key[:key.rfind("act_quant")-1]
         print("Layer Name = "+ layerstr)

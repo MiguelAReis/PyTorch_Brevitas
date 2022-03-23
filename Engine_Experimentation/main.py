@@ -59,10 +59,10 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 # Model
 print('==> Building model..')
 print("Weights = "+ str(args.weights) +", Activations = "+str(args.activations))
-LeNetQuant.setBitWidths(args.weights,args.activations)
-net = LeNetQuant()
+MobileNetQuant.setBitWidths(args.weights,args.activations)
+#net = LeNetQuant()
 #net = ResNetQuant101()
-#net = MobileNetQuant()
+net = MobileNetQuant()
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
@@ -77,16 +77,15 @@ if args.resume:
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
     checkpoint = torch.load('./checkpoint/ckpt.pth')
-    #for k, v in checkpoint["net"].items():
-    #    k = k.replace("module.","",1) # remove `module.`
-    #    print(k)
     try:
         net.module.load_state_dict(checkpoint["net"])
     except:
         net.load_state_dict(checkpoint["net"])
-
-    optimizer.load_state_dict(checkpoint['optimizer_state'])
-
+    try:
+        optimizer.load_state_dict(checkpoint['optimizer_state'])
+    except:
+        print()
+        
     net.to(device)
 
     best_acc = checkpoint['acc']

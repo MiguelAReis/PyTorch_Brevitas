@@ -142,7 +142,7 @@ class ResNetQuant(nn.Module):
         global weightBitWidth
         global activationBitWidth
 
-        self.quant_inp = qnn.QuantIdentity(bit_width=8, act_quant=CustomActQuant, return_quant_tensor=True)
+        self.imageQuant = qnn.QuantIdentity(bit_width=8, act_quant=CustomActQuant, return_quant_tensor=True)
         self.in_planes = 64
 
         self.conv1 = qnn.QuantConv2d(3, 64, kernel_size=3,stride=1, padding=1, bias=False, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=True)
@@ -170,7 +170,7 @@ class ResNetQuant(nn.Module):
         activationBitWidth=activation
 
     def forward(self, x):
-        out = self.relu(self.bn1(self.conv1(self.quant_inp(x))))
+        out = self.relu(self.bn1(self.conv1(self.imageQuant(x))))
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)

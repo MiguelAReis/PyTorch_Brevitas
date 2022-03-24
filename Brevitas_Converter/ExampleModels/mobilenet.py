@@ -16,7 +16,7 @@ class Block(nn.Module):
         self.conv2 = nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
         self.bn2 = nn.BatchNorm2d(out_planes)
         self.relu1 = nn.ReLU()
-        self.ss = nn.ReLU()
+        self.relu2 = nn.ReLU()
 
     def forward(self, x):
         out = self.relu1(self.bn1(self.conv1(x)))

@@ -79,6 +79,18 @@ with open(args.output, 'w') as outfile:
 					line=line[:lastParentheses] + ", weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
 				else:
 					line=line[:lastParentheses] + ", bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
+
+			if("nn.AdaptiveAvgPool2d" in line):
+				line=line.replace("nn.AdaptiveAvgPool2d","qnn.QuantAdaptiveAvgPool2d",1)
+
+				lastParentheses=line.rfind(")")
+				line=line[:lastParentheses] + ", bit_width=activationBitWidth, return_quant_tensor=True"+line[lastParentheses:]
+
+			if("nn.Dropout" in line):
+				line=line.replace("nn.Dropout","qnn.QuantDropout",1)
+				lastParentheses=line.rfind(")")
+				line=line[:lastParentheses] + ", return_quant_tensor=True"+line[lastParentheses:]
+
 			if("nn.AvgPool2d" in line):
 				line=line.replace("nn.AvgPool2d","qnn.QuantAvgPool2d",1)
 

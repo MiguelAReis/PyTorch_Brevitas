@@ -44,7 +44,7 @@ with open(args.output, 'w') as outfile:
 			if(".__init__()" in line and firstlayer):
 				line=line+"        global weightBitWidth\n        global activationBitWidth\n\n        self.imageQuant = qnn.QuantIdentity(bit_width="+str(args.inputBitWidth)+", act_quant=CustomActQuant, return_quant_tensor=True)\n"
 
-			if("def forward" in line):
+			if("def forward" in line and firstlayer):
 				lastParentheses=line.rfind(")")
 				layerInput=line[line[:lastParentheses].rfind(" ")+1:lastParentheses]
 				line="    def setBitWidths(weight,activation):\n        global weightBitWidth\n        global activationBitWidth\n        weightBitWidth=weight\n        activationBitWidth=activation\n\n"+line
@@ -70,7 +70,9 @@ with open(args.output, 'w') as outfile:
 					line=line[:lastParentheses] + "bit_width=activationBitWidth, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
 				else:
 					line=line[:lastParentheses] + ", bit_width=activationBitWidth, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
-				line = line[:len(line)-1] +" if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)\n"
+				
+				lastParentheses=line.rfind(")")
+				line=line[:lastParentheses+1] +" if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)"+line[lastParentheses+1:]
 			if("nn.Linear" in line):
 				line=line.replace("nn.Linear","qnn.QuantLinear",1)
 

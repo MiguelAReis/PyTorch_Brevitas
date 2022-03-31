@@ -15,7 +15,13 @@ args = parser.parse_args()
 exec("from "+args.modelFile.replace(".py","",1)+" import *")
 eval(args.model+".setBitWidths(8,8)")
 model = eval(args.model+"()")
-model = torch.nn.DataParallel(model)
+'''
+try:
+    model = torch.nn.DataParallel(model)
+except:
+    pass
+'''
+
 state = {
     'net': model.state_dict(),
     'optimizer_state': None,

@@ -47,22 +47,23 @@ with open(args.output, 'w') as outfile:
 			if("def forward" in line and firstlayer):
 				lastParentheses=line.rfind(")")
 				layerInput=line[line[:lastParentheses].rfind(" ")+1:lastParentheses]
+				
 				line="    def setBitWidths(weight,activation):\n        global weightBitWidth\n        global activationBitWidth\n        weightBitWidth=weight\n        activationBitWidth=activation\n\n"+line
-			if(("("+layerInput+")") in line and firstlayer):
-				line=line.replace(layerInput,"self.imageQuant("+layerInput+")",1)
+			if(("("+layerInput+")") in line and firstlayer):				
+				line=("self.imageQuant("+layerInput+")").join(line.rsplit(layerInput,1))
 				firstlayer=False
 				out=line[:line.find("=")].replace("	","").replace(" ","")
 			if(("return "+out) in line):
 				lastLayer=prevLn
 				forward=False
 				
-			if("nn.Conv2d" in line):
+			if("nn.Conv2d(" in line):
 				line=line.replace("nn.Conv2d","qnn.QuantConv2d",1)
 
 				lastParentheses=line.rfind(")")
 				line=line[:lastParentheses] + ", weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
 
-			if("nn.ReLU" in line):
+			if("nn.ReLU(" in line):
 				line=line.replace("nn.ReLU","qnn.QuantReLU",1)
 
 				lastParentheses=line.rfind(")")
@@ -73,7 +74,7 @@ with open(args.output, 'w') as outfile:
 				
 				lastParentheses=line.rfind(")")
 				line=line[:lastParentheses+1] +" if weightBitWidth not in (1,2) else qnn.QuantIdentity(bit_width=activationBitWidth, act_quant=CustomActQuant, return_quant_tensor=True)"+line[lastParentheses+1:]
-			if("nn.Linear" in line):
+			if("nn.Linear(" in line):
 				line=line.replace("nn.Linear","qnn.QuantLinear",1)
 
 				lastParentheses=line.rfind(")")
@@ -82,23 +83,23 @@ with open(args.output, 'w') as outfile:
 				else:
 					line=line[:lastParentheses] + ", bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
 
-			if("nn.AdaptiveAvgPool2d" in line):
+			if("nn.AdaptiveAvgPool2d(" in line):
 				line=line.replace("nn.AdaptiveAvgPool2d","qnn.QuantAdaptiveAvgPool2d",1)
 
 				lastParentheses=line.rfind(")")
 				line=line[:lastParentheses] + ", bit_width=activationBitWidth, return_quant_tensor=True"+line[lastParentheses:]
 
-			if("nn.Dropout" in line):
+			if("nn.Dropout(" in line):
 				line=line.replace("nn.Dropout","qnn.QuantDropout",1)
 				lastParentheses=line.rfind(")")
 				line=line[:lastParentheses] + ", return_quant_tensor=True"+line[lastParentheses:]
 
-			if("nn.AvgPool2d" in line):
+			if("nn.AvgPool2d(" in line):
 				line=line.replace("nn.AvgPool2d","qnn.QuantAvgPool2d",1)
 
 				lastParentheses=line.rfind(")")
 				line=line[:lastParentheses] + ", bit_width=activationBitWidth, return_quant_tensor=True"+line[lastParentheses:]
-			if("nn.MaxPool2d" in line):
+			if("nn.MaxPool2d(" in line):
 				line=line.replace("nn.MaxPool2d","qnn.QuantMaxPool2d",1)
 
 				lastParentheses=line.rfind(")")
@@ -128,9 +129,14 @@ with open(args.output, 'r') as outfile:
 		if(("super("+quantNetName) in line):
 			forward=True
 		if(lastLayer in line and forward):
-			line=line.replace("return_quant_tensor=True","return_quant_tensor=False",1)
+			if("return_quant_tensor=True" in line):
+				line=line.replace("return_quant_tensor=True","return_quant_tensor=False",1)
+
+			else:
+				print("Last layer not found")
 			forward=False
 		replacement = replacement + line
+	replacement=replacement.replace("    ","	")
 	outfile.close()
 
 outfile = open(args.output, "w")

@@ -9,7 +9,13 @@ import torch.optim as optim
 import torchvision
 
 import brevitas.nn as qnn
+import brevitas
 import math
+
+
+def setCache(m):
+    m.cache_inference_quant_bias=True
+
 
 parser = argparse.ArgumentParser(description='Quantized Weights Extractor')
 parser.add_argument('--pth', default="ckpt.pth", type=str, help='Location of .pth file e.g. ckpt.pth')
@@ -24,16 +30,21 @@ exec("from "+args.modelFile.replace(".py","",1)+" import *")
 eval(args.model+".setBitWidths(args.weights,args.activations)")
 model = eval(args.model+"()")
 model = torch.nn.DataParallel(model)
+
+model.apply(setCache)
+
+
+
 state_dict = torch.load(args.pth, map_location='cpu')
 model.load_state_dict(state_dict["net"])
 
 model.to("cuda")
 model.eval()
-cache_inference_quant_bias=True
-with torch.no_grad():
-    inputs = torch.empty(2,3,32,32)
-    inputs.to("cuda")
-    model(inputs)
+
+inputs = torch.rand(2,3,32,32)
+inputs.to("cuda")
+print(model(inputs))
+
 
 if(args.fullprint):
     torch.set_printoptions(profile="full")
@@ -41,18 +52,19 @@ if(args.fullprint):
 
 for key, value in state_dict["net"].items():
     if("weight" in key):
+
         print(eval("model."+key.replace("weight","int_weight()",1)))
         print("Layer Name = "+ key)
         print("Scale = " + str(eval("model."+key.replace("weight","quant_weight_scale()",1))))
         input("ENTER")
-    '''
+
     if("bias" in key):
         print("model."+key.replace(".bias","",1)+".int_bias()")
         print(eval("model."+key.replace(".bias","",1)+".int_bias()"))
         print("Layer Name = "+ key)
-        #print("Scale = " + str(eval("model."+key.replace("bias","maybe_quant_bias_scale()",1))))
+        print("Scale = " + str(eval("model."+key.replace("bias","quant_bias_scale()",1))))
         input("ENTER")
-    '''
+
     if("relu" in key):
         layerstr=key[:key.rfind("act_quant")-1]
         print("Layer Name = "+ layerstr)

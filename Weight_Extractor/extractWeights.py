@@ -55,14 +55,20 @@ for key, value in state_dict["net"].items():
 
         print(eval("model."+key.replace("weight","int_weight()",1)))
         print("Layer Name = "+ key)
-        print("Scale = " + str(eval("model."+key.replace("weight","quant_weight_scale()",1))))
+        scale=eval("model."+key.replace("weight","quant_weight_scale().cpu().detach().numpy()",1))
+        print("Scale = " + str(scale))
+        print("Shift " + str(abs(math.log(scale,2))) + " positions to the right")
+        #print("Scale = " + str(eval("model."+key.replace("weight","quant_weight_scale()",1))))
         input("ENTER")
 
     if("bias" in key):
         print("model."+key.replace(".bias","",1)+".int_bias()")
         print(eval("model."+key.replace(".bias","",1)+".int_bias()"))
         print("Layer Name = "+ key)
-        print("Scale = " + str(eval("model."+key.replace("bias","quant_bias_scale()",1))))
+        scale=eval("model."+key.replace("bias","quant_bias_scale().cpu().detach().numpy()[0]",1))
+        print("Scale = "+ str(scale))
+        print("Shift "+ str(abs(math.log(scale,2)))+ " positions to the right")
+        #print("Scale = " + str(eval("model."+key.replace("bias","quant_bias_scale()",1))))
         input("ENTER")
 
     if("relu" in key):

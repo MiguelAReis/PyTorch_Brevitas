@@ -7,7 +7,7 @@ import torch.backends.cudnn as cudnn
 
 import torchvision
 import torchvision.transforms as transforms
-
+import brevitas
 import os
 import argparse
 
@@ -59,17 +59,19 @@ classes = ('plane', 'car', 'bird', 'cat', 'deer',
 # Model
 print('==> Building model..')
 print("Weights = "+ str(args.weights) +", Activations = "+str(args.activations))
-MobileNetQuant.setBitWidths(args.weights,args.activations)
-#net = LeNetQuant()
+EfficientNetQuant.setBitWidths(args.weights,args.activations)
+#ne#t = LeNetQuant()
 #net = ResNetQuant101()
-net = MobileNetQuant()
+#net = MobileNetQuant()
+net = EfficientNet.from_name('b0',num_classes=10,image_size=32)
+#net = EfficientNetQuant.from_name('b0',num_classes=10,image_size=32)
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
-
+brevitas.cache_inference_quant_bias=True
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(net.parameters(), lr=args.lr, weight_decay=0)
+optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=0)
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 if args.resume:

@@ -27,6 +27,7 @@ with open(args.output, 'w') as outfile:
 	outfile.write("\n#Global Variables\n\n#End of Engine declaration\n\n")
 
 	netname=args.input[args.input.rfind("/")+1:].replace(".py","",1)
+	print(netname)
 	layerInput="BLANK"
 	out="BLANK"
 
@@ -63,6 +64,12 @@ with open(args.output, 'w') as outfile:
 				lastParentheses=line.rfind(")")
 				line=line[:lastParentheses] + ", weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
 
+			if("nn.Identity(" in line):
+				line=line.replace("nn.Identity","qnn.QuantIdentity",1)
+
+				lastParentheses=line.rfind(")")
+				line=line[:lastParentheses] + " bit_width=activationBitWidth, return_quant_tensor=True, act_quant="+args.activationsEngine+line[lastParentheses:]
+
 			if("nn.ReLU(" in line):
 				line=line.replace("nn.ReLU","qnn.QuantReLU",1)
 
@@ -82,13 +89,13 @@ with open(args.output, 'w') as outfile:
 					line=line[:lastParentheses] + ", weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
 				else:
 					line=line[:lastParentheses] + ", bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant="+ args.weightsEngine +", return_quant_tensor=True"+line[lastParentheses:]
-
+			'''
 			if("nn.AdaptiveAvgPool2d(" in line):
 				line=line.replace("nn.AdaptiveAvgPool2d","qnn.QuantAdaptiveAvgPool2d",1)
 
 				lastParentheses=line.rfind(")")
 				line=line[:lastParentheses] + ", bit_width=activationBitWidth, return_quant_tensor=True"+line[lastParentheses:]
-
+			'''
 			if("nn.Dropout(" in line):
 				line=line.replace("nn.Dropout","qnn.QuantDropout",1)
 				lastParentheses=line.rfind(")")
@@ -126,14 +133,12 @@ with open(args.output, 'r') as outfile:
 	replacement = ""
 	# using the for loop
 	for line in outfile:
-		if(("super("+quantNetName) in line):
+		if(("super("+quantNetName).casefold() in line.casefold()):
 			forward=True
+
 		if(lastLayer in line and forward):
 			if("return_quant_tensor=True" in line):
 				line=line.replace("return_quant_tensor=True","return_quant_tensor=False",1)
-
-			else:
-				print("Last layer not found")
 			forward=False
 		replacement = replacement + line
 	replacement=replacement.replace("    ","	")
@@ -143,7 +148,8 @@ outfile = open(args.output, "w")
 outfile.write(replacement)
 outfile.close()
 
-
+if(forward):
+	print("Last Layer wasnt found. Please set return_quant_tensor= of the last layer to False")
 print("Conversion done.\n\
 New net name changed to " + quantNetName +"\n\
 On the training script define the bit_width of the weights and activations by calling \""+quantNetName+".setBitWidths(weights,activations)\" before you call the model")

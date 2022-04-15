@@ -1,12 +1,3 @@
- 
-"""model.py - Model and module class for EfficientNet.
-   They are built to mirror those in the official TensorFlow implementation.
-"""
-
-# Author: lukemelas (github username)
-# Github repo: https://github.com/lukemelas/EfficientNet-PyTorch
-# With adjustments and added comments by workingcoder (github username).
-
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -18,29 +9,13 @@ from torch.utils import model_zoo
 
 
 VALID_MODELS = (
-    'efficientnet-b0', 'efficientnet-b1', 'efficientnet-b2', 'efficientnet-b3',
-    'efficientnet-b4', 'efficientnet-b5', 'efficientnet-b6', 'efficientnet-b7',
-    'efficientnet-b8',
+    'b0', 'b1', 'b2', 'b3',
+    'b4', 'b5', 'b6', 'b7',
+    'b8',
 
     # Support the construction of 'efficientnet-l2' without pretrained weights
-    'efficientnet-l2'
+    'l2'
 )
-
-
-################################################################################
-# Help functions for model architecture
-################################################################################
-
-# GlobalParams and BlockArgs: Two namedtuples
-# Swish and MemoryEfficientSwish: Two implementations of the method
-# round_filters and round_repeats:
-#     Functions to calculate params for scaling model width and depth ! ! !
-# get_width_and_height_from_size and calculate_output_image_size
-# drop_connect: A structural design
-# get_same_padding_conv2d:
-#     Conv2dDynamicSamePadding
-#     Conv2dStaticSamePadding
-
 
 # Parameters for the entire model (stem, all blocks, and head)
 GlobalParams = collections.namedtuple('GlobalParams', [
@@ -56,27 +31,6 @@ BlockArgs = collections.namedtuple('BlockArgs', [
 # Set GlobalParams and BlockArgs's defaults
 GlobalParams.__new__.__defaults__ = (None,) * len(GlobalParams._fields)
 BlockArgs.__new__.__defaults__ = (None,) * len(BlockArgs._fields)
-
-
-# A memory-efficient implementation of Swish function
-class SwishImplementation(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, i):
-        result = i * torch.sigmoid(i)
-        ctx.save_for_backward(i)
-        return result
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        i = ctx.saved_tensors[0]
-        sigmoid_i = torch.sigmoid(i)
-        return grad_output * (sigmoid_i * (1 + i * (1 - sigmoid_i)))
-
-
-class MemoryEfficientSwish(nn.Module):
-    def forward(self, x):
-        return SwishImplementation.apply(x)
-
 
 def round_filters(filters, global_params):
     """Calculate and round number of filters based on width multiplier.
@@ -317,7 +271,7 @@ class BlockDecoder(object):
         return block_strings
 
 
-def efficientnet_params(model_name):
+def model_params(model_name):
     """Map EfficientNet model name to parameter coefficients.
     Args:
         model_name (str): Model name to be queried.
@@ -326,21 +280,21 @@ def efficientnet_params(model_name):
     """
     params_dict = {
         # Coefficients:   width,depth,res,dropout
-        'efficientnet-b0': (1.0, 1.0, 224, 0.2),
-        'efficientnet-b1': (1.0, 1.1, 240, 0.2),
-        'efficientnet-b2': (1.1, 1.2, 260, 0.3),
-        'efficientnet-b3': (1.2, 1.4, 300, 0.3),
-        'efficientnet-b4': (1.4, 1.8, 380, 0.4),
-        'efficientnet-b5': (1.6, 2.2, 456, 0.4),
-        'efficientnet-b6': (1.8, 2.6, 528, 0.5),
-        'efficientnet-b7': (2.0, 3.1, 600, 0.5),
-        'efficientnet-b8': (2.2, 3.6, 672, 0.5),
-        'efficientnet-l2': (4.3, 5.3, 800, 0.5),
+        'b0': (1.0, 1.0, 224, 0.2),
+        'b1': (1.0, 1.1, 240, 0.2),
+        'b2': (1.1, 1.2, 260, 0.3),
+        'b3': (1.2, 1.4, 300, 0.3),
+        'b4': (1.4, 1.8, 380, 0.4),
+        'b5': (1.6, 2.2, 456, 0.4),
+        'b6': (1.8, 2.6, 528, 0.5),
+        'b7': (2.0, 3.1, 600, 0.5),
+        'b8': (2.2, 3.6, 672, 0.5),
+        'l2': (4.3, 5.3, 800, 0.5),
     }
     return params_dict[model_name]
 
 
-def efficientnet(width_coefficient=None, depth_coefficient=None, image_size=None,dropout_rate=0.2, drop_connect_rate=0.2, num_classes=1000, include_top=True):
+def model(width_coefficient=None, depth_coefficient=None, image_size=None,dropout_rate=0.2, drop_connect_rate=0.2, num_classes=1000, include_top=True):
     """Create BlockArgs and GlobalParams for efficientnet model.
     Args:
         width_coefficient (float)
@@ -393,13 +347,9 @@ def get_model_params(model_name, override_params):
     Returns:
         blocks_args, global_params
     """
-    if model_name.startswith('efficientnet'):
-        w, d, s, p = efficientnet_params(model_name)
-        # note: all models have drop connect rate = 0.2
-        blocks_args, global_params = efficientnet(
-            width_coefficient=w, depth_coefficient=d, dropout_rate=p, image_size=s)
-    else:
-        raise NotImplementedError('model name is not pre-defined: {}'.format(model_name))
+    w, d, s, p = model_params(model_name)
+    # note: all models have drop connect rate = 0.2
+    blocks_args, global_params = model(width_coefficient=w, depth_coefficient=d, dropout_rate=p, image_size=s)
     if override_params:
         # ValueError will be raised here if override_params has fields not included in global_params.
         global_params = global_params._replace(**override_params)
@@ -451,7 +401,7 @@ class MBConvBlock(nn.Module):
         final_oup = self._block_args.output_filters
         self._project_conv = Conv2dStaticSamePadding(in_channels=oup, out_channels=final_oup, kernel_size=1, bias=False,image_size=image_size)
         self._bn2 = nn.BatchNorm2d(num_features=final_oup, momentum=self._bn_mom, eps=self._bn_eps)
-        self._swish = MemoryEfficientSwish()
+        self._swish = nn.SiLU()
 
     def forward(self, inputs, drop_connect_rate=None):
         """MBConvBlock's forward function.
@@ -494,33 +444,10 @@ class MBConvBlock(nn.Module):
             x = x + inputs  # skip connection
         return x
 
-    def set_swish(self, memory_efficient=True):
-        """Sets swish function as memory efficient (for training) or standard (for export).
-        Args:
-            memory_efficient (bool): Whether to use memory-efficient version of swish.
-        """
-        self._swish = MemoryEfficientSwish() if memory_efficient else Swish()
-
 
 class EfficientNet(nn.Module):
-    """EfficientNet model.
-       Most easily loaded with the .from_name or .from_pretrained methods.
-    Args:
-        blocks_args (list[namedtuple]): A list of BlockArgs to construct blocks.
-        global_params (namedtuple): A set of GlobalParams shared between blocks.
-    References:
-        [1] https://arxiv.org/abs/1905.11946 (EfficientNet)
-    Example:
-        >>> import torch
-        >>> from efficientnet.model import EfficientNet
-        >>> inputs = torch.rand(1, 3, 224, 224)
-        >>> model = EfficientNet.from_pretrained('efficientnet-b0')
-        >>> model.eval()
-        >>> outputs = model(inputs)
-    """
-
     def __init__(self, blocks_args=None, global_params=None):
-        super().__init__()
+        super(EfficientNet,self).__init__()
         assert isinstance(blocks_args, list), 'blocks_args should be a list'
         assert len(blocks_args) > 0, 'block args must be greater than 0'
         self._global_params = global_params
@@ -569,21 +496,13 @@ class EfficientNet(nn.Module):
 
         # Final linear layer
         self._avg_pooling = nn.AdaptiveAvgPool2d(1)
+        self.ident =nn.Identity()
         if self._global_params.include_top:
             self._dropout = nn.Dropout(self._global_params.dropout_rate)
             self._fc = nn.Linear(out_channels, self._global_params.num_classes)
 
         # set activation to memory efficient swish by default
-        self._swish = MemoryEfficientSwish()
-
-    def set_swish(self, memory_efficient=True):
-        """Sets swish function as memory efficient (for training) or standard (for export).
-        Args:
-            memory_efficient (bool): Whether to use memory-efficient version of swish.
-        """
-        self._swish = MemoryEfficientSwish() if memory_efficient else nn.SiLU()
-        for block in self._blocks:
-            block.set_swish(memory_efficient)
+        self._swish = nn.SiLU()
 
     def extract_endpoints(self, inputs):
         """Use convolution layer to extract features
@@ -664,7 +583,7 @@ class EfficientNet(nn.Module):
         # Convolution layers
         x = self.extract_features(inputs)
         # Pooling and final linear layer
-        x = self._avg_pooling(x)
+        x = self.ident(self._avg_pooling(x))
         if self._global_params.include_top:
             x = x.flatten(start_dim=1)
             x = self._dropout(x)
@@ -722,8 +641,7 @@ class EfficientNet(nn.Module):
             A pretrained efficientnet model.
         """
         model = cls.from_name(model_name, num_classes=num_classes, **override_params)
-        load_pretrained_weights(model, model_name, weights_path=weights_path,
-                                load_fc=(num_classes == 1000), advprop=advprop)
+        load_pretrained_weights(model, model_name, weights_path=weights_path,load_fc=(num_classes == 1000), advprop=advprop)
         model._change_in_channels(in_channels)
         return model
 
@@ -736,7 +654,7 @@ class EfficientNet(nn.Module):
             Input image size (resolution).
         """
         cls._check_model_name_is_valid(model_name)
-        _, _, res, _ = efficientnet_params(model_name)
+        _, _, res, _ = model_params(model_name)
         return res
 
     @classmethod

@@ -453,7 +453,10 @@ class MBConvBlock(nn.Module):
 		final_oup = self._block_args.output_filters
 		self._project_conv = Conv2dStaticSamePadding(in_channels=oup, out_channels=final_oup, kernel_size=1, bias=False,image_size=image_size)
 		self._bn2 = nn.BatchNorm2d(num_features=final_oup, momentum=self._bn_mom, eps=self._bn_eps)
-		self._swish = nn.SiLU()
+		self._swish = nn.Sequential(
+			nn.SiLU(),
+			qnn.QuantIdentity( bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant)
+			)
 
 	def forward(self, inputs, drop_connect_rate=None):
 		"""MBConvBlock's forward function.
@@ -558,7 +561,10 @@ class EfficientNetQuant(nn.Module):
 			self._fc = qnn.QuantLinear(out_channels, self._global_params.num_classes, bias=True, weight_bit_width=weightBitWidth, bias_quant=BiasQuant, weight_quant=CustomWeightQuant, return_quant_tensor=False)
 
 		# set activation to memory efficient swish by default
-		self._swish = nn.SiLU()
+		self._swish = nn.Sequential(
+			nn.SiLU(),
+			qnn.QuantIdentity( bit_width=activationBitWidth, return_quant_tensor=True, act_quant=CustomActQuant)
+			)
 
 	def extract_endpoints(self, inputs):
 		"""Use convolution layer to extract features

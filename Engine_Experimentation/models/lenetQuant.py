@@ -43,9 +43,7 @@ class CustomWeightQuant(CustomQuant,WeightQuantSolver):
     scaling_const = 1.0        
 
 class CustomActQuant(CustomQuant, ActQuantSolver):
-    min_val = 0
-    max_val = 10
-
+    signed=False
 #Global Variables
 
 #End of Engine declaration
